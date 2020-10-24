@@ -1,0 +1,41 @@
+{
+    "name": "@nexcodepl/endpoint-client",
+    "version": "1.0.0",
+    "description": "Package for handling endpoint on client side",
+    "main": "lib/index.js",
+    "types": "lib/index.d.ts",
+    "repository": "https://github.com/NexCodePL/endpoint-client.git",
+    "author": "Alexander Stefański <alex@nexcode.pl>",
+    "license": "MIT",
+    "keywords": [
+        "nexcodepl",
+        "endpoint",
+        "client"
+    ],
+    "private": false,
+    "scripts": {
+        "build": "yarn tsc",
+        "format": "yarn prettier --write \"src/**/*.ts\"",
+        "lint": "yarn eslint . --ext .ts",
+        "prepare": "yarn build",
+        "prepublishOnly": "yarn lint",
+        "preversion": "yarn lint",
+        "version": "yarn format && git add -A src",
+        "postversion": "git push && git push --tags"
+    },
+    "dependencies": {
+        "axios": "^0.21.0",
+        "react": "^17.0.1"
+    },
+    "devDependencies": {
+        "@types/react": "^16.9.53",
+        "@typescript-eslint/eslint-plugin": "^4.5.0",
+        "@typescript-eslint/parser": "^4.5.0",
+        "eslint": "^7.12.0",
+        "prettier": "^2.1.2",
+        "typescript": "^4.0.3"
+    },
+    "files": [
+        "lib/**/*"
+    ]
+}
