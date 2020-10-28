@@ -6,7 +6,7 @@ import {
     EndpointDefinitionGetData,
     EndpointDefinition,
     EndpointDefinitionGetResponse,
-} from "./endpoint.types";
+} from "@nexcodepl/endpoint-types";
 
 interface EndpointArgsObject<TEndpointDefinition extends EndpointDefinition<any, any, any, boolean>> {
     params?: EndpointDefinitionGetParams<TEndpointDefinition>;
