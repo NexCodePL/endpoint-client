@@ -3,3 +3,10 @@ export type AuthorizationHeaders = {
 };
 
 export type AuthorizationHeadersProvider = () => Promise<AuthorizationHeaders>;
+
+export interface EndpointError {
+    code: number;
+    errorCode: string;
+    errorMessage: string;
+    errorData?: any;
+}

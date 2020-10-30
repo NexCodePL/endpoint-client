@@ -1,23 +1,8 @@
-import axios from "axios";
 import { useRef, useState } from "react";
-import {
-    EndpointArgs,
-    EndpointDefinition,
-    EndpointDefinitionGetResponse,
-} from "@nexcodepl/endpoint-types";
+import { EndpointArgs, EndpointDefinition, EndpointDefinitionGetResponse } from "@nexcodepl/endpoint-types";
 
 import { AuthorizationHeadersProvider } from "./client.types";
 import { endpoint } from "./endpoint";
-
-interface EndpointErrorObject {
-    response?: {
-        data?: {
-            errorMessage?: string;
-            errorCode?: string;
-            errorData?: any;
-        };
-    };
-}
 
 type DatasourceCancel = () => void;
 
@@ -61,29 +46,26 @@ export function useDatasource<TEndpointDefintion extends EndpointDefinition<any,
     const cancelToken = useRef<DatasourceCancel | undefined>(undefined);
 
     async function load(args: EndpointArgs<TEndpointDefintion>) {
-        try {
-            cancel();
+        cancel();
 
-            setState({ state: "pending" });
+        setState({ state: "pending" });
 
-            const response = await endpoint(endpointDefinition, args, authorizationHeadersProvider, cancelFunction => {
-                cancelToken.current = cancelFunction;
-            });
+        const response = await endpoint(endpointDefinition, args, authorizationHeadersProvider, cancelFunction => {
+            cancelToken.current = cancelFunction;
+        });
 
-            setState({ state: "completed", response: response });
-        } catch (e) {
-            if (axios.isCancel(e)) {
-                return;
-            }
+        if (response[0]) {
+            if (response[0].errorCode === "AxiosCancelError") return;
 
-            const error: EndpointErrorObject | undefined = e;
             const errorState: DatasourceStateError = {
                 state: "error",
-                code: error?.response?.data?.errorCode ?? "UnknownError",
-                message: error?.response?.data?.errorMessage ?? "Unknown Error",
-                data: error?.response?.data?.errorData ?? undefined,
+                code: response[0].errorCode,
+                message: response[0].errorMessage,
+                data: response[0].errorData,
             };
             setState(errorState);
+        } else {
+            setState({ state: "completed", response: response[1] });
         }
     }
 
