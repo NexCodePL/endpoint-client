@@ -1,17 +1,13 @@
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
 import { useRef, useState } from "react";
 import {
     EndpointArgs,
-    EndpointDefinitionGetParams,
-    EndpointDefinitionGetData,
     EndpointDefinition,
     EndpointDefinitionGetResponse,
 } from "@nexcodepl/endpoint-types";
 
-interface EndpointArgsObject<TEndpointDefinition extends EndpointDefinition<any, any, any, boolean>> {
-    params?: EndpointDefinitionGetParams<TEndpointDefinition>;
-    data?: EndpointDefinitionGetData<TEndpointDefinition>;
-}
+import { AuthorizationHeadersProvider } from "./client.types";
+import { endpoint } from "./endpoint";
 
 interface EndpointErrorObject {
     response?: {
@@ -24,12 +20,6 @@ interface EndpointErrorObject {
 }
 
 type DatasourceCancel = () => void;
-
-export type AuthorizationHeaders = {
-    [key: string]: string | number;
-};
-
-export type AuthorizationHeadersProvider = () => Promise<AuthorizationHeaders>;
 
 export interface DatasourceStateIdle {
     state: "idle";
@@ -72,29 +62,15 @@ export function useDatasource<TEndpointDefintion extends EndpointDefinition<any,
 
     async function load(args: EndpointArgs<TEndpointDefintion>) {
         try {
-            const argsObject: EndpointArgsObject<TEndpointDefintion> = args;
-
             cancel();
 
             setState({ state: "pending" });
 
-            const authorizationHeaders = authorizationHeadersProvider ? await authorizationHeadersProvider() : {};
-
-            const response: AxiosResponse<EndpointDefinitionGetResponse<TEndpointDefintion>> = await axios({
-                url: endpointDefinition.url,
-                method: endpointDefinition.method,
-                data: argsObject.data || {},
-                params: argsObject.params || {},
-                headers: {
-                    "Content-Type": "application/json",
-                    ...authorizationHeaders,
-                },
-                cancelToken: new axios.CancelToken(cancelFunction => {
-                    cancelToken.current = () => cancelFunction();
-                }),
+            const response = await endpoint(endpointDefinition, args, authorizationHeadersProvider, cancelFunction => {
+                cancelToken.current = cancelFunction;
             });
 
-            setState({ state: "completed", response: response.data });
+            setState({ state: "completed", response: response });
         } catch (e) {
             if (axios.isCancel(e)) {
                 return;
