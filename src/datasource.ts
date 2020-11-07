@@ -50,22 +50,27 @@ export function useDatasource<TEndpointDefintion extends EndpointDefinition<any,
 
         setState({ state: "pending" });
 
-        const response = await endpoint(endpointDefinition, args, authorizationHeadersProvider, cancelFunction => {
-            cancelToken.current = cancelFunction;
-        });
+        const endpointResponse = await endpoint(
+            endpointDefinition,
+            args,
+            authorizationHeadersProvider,
+            cancelFunction => {
+                cancelToken.current = cancelFunction;
+            }
+        );
 
-        if (response[0]) {
-            if (response[0].errorCode === "AxiosCancelError") return;
+        if (endpointResponse[0] !== undefined) {
+            if (endpointResponse[0].errorCode === "AxiosCancelError") return;
 
             const errorState: DatasourceStateError = {
                 state: "error",
-                code: response[0].errorCode,
-                message: response[0].errorMessage,
-                data: response[0].errorData,
+                code: endpointResponse[0].errorCode,
+                message: endpointResponse[0].errorMessage,
+                data: endpointResponse[0].errorData,
             };
             setState(errorState);
         } else {
-            setState({ state: "completed", response: response[1] });
+            setState({ state: "completed", response: endpointResponse[1] });
         }
     }
 
