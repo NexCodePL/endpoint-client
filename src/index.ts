@@ -1,3 +1,3 @@
-export * from "./client.types";
-export * from "./endpoint";
-export * from "./datasource";
+export * from "./client.types.js";
+export * from "./endpoint.js";
+export * from "./datasource.js";

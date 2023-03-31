@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
+import { Store, useStore } from "@nexcodepl/react-store";
 import { EndpointArgs, EndpointDefinition, EndpointDefinitionGetResponse } from "@nexcodepl/endpoint-types";
 
-import { AuthorizationHeadersProvider } from "./client.types";
-import { endpoint } from "./endpoint";
+import { AuthorizationHeadersProvider } from "./client.types.js";
+import { endpoint } from "./endpoint.js";
 
 type DatasourceCancel = () => void;
 
@@ -12,6 +13,11 @@ export interface DatasourceStateIdle {
 
 export interface DatasourceStatePending {
     state: "pending";
+}
+
+export interface DatasourceStateRefreshing<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
+    response: EndpointDefinitionGetResponse<TEndpoint>;
+    state: "refreshing";
 }
 
 export interface DatasourceStateCompleted<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
@@ -29,6 +35,7 @@ export type DatasourceState<TEndpoint extends EndpointDefinition<any, any, any, 
     | DatasourceStateIdle
     | DatasourceStatePending
     | DatasourceStateCompleted<TEndpoint>
+    | DatasourceStateRefreshing<TEndpoint>
     | DatasourceStateError;
 
 export const datasourceStateIdle: DatasourceStateIdle = { state: "idle" };
@@ -37,18 +44,28 @@ export function useDatasource<TEndpointDefintion extends EndpointDefinition<any,
     endpointDefinition: TEndpointDefintion,
     authorizationHeadersProvider?: AuthorizationHeadersProvider
 ): {
-    state: DatasourceState<TEndpointDefintion>;
-    load: (args: EndpointArgs<TEndpointDefintion>) => void;
+    state: Store<DatasourceState<TEndpointDefintion>>;
+    load: (args: EndpointArgs<TEndpointDefintion>, keepState?: boolean) => void;
     cancel: () => void;
     reset: () => void;
 } {
-    const [state, setState] = useState<DatasourceState<TEndpointDefintion>>({ ...datasourceStateIdle });
+    const state = useStore<DatasourceState<TEndpointDefintion>>({
+        ...datasourceStateIdle,
+    });
     const cancelToken = useRef<DatasourceCancel | undefined>(undefined);
 
-    async function load(args: EndpointArgs<TEndpointDefintion>) {
+    async function load(args: EndpointArgs<TEndpointDefintion>, keepState?: boolean) {
         cancel();
 
-        setState({ state: "pending" });
+        state.set(p => {
+            if (!!keepState && (p.state === "completed" || p.state === "refreshing")) {
+                return { state: "refreshing", response: p.response };
+            }
+
+            return {
+                state: "pending",
+            };
+        });
 
         const endpointResponse = await endpoint(
             endpointDefinition,
@@ -68,10 +85,12 @@ export function useDatasource<TEndpointDefintion extends EndpointDefinition<any,
                 message: endpointResponse[0].errorMessage,
                 data: endpointResponse[0].errorData,
             };
-            setState(errorState);
+            state.set(errorState);
         } else {
-            setState({ state: "completed", response: endpointResponse[1] });
+            state.set({ state: "completed", response: endpointResponse[1] });
         }
+
+        return endpointResponse;
     }
 
     function cancel() {
@@ -83,7 +102,7 @@ export function useDatasource<TEndpointDefintion extends EndpointDefinition<any,
 
     function reset() {
         cancel();
-        setState({ state: "idle" });
+        state.set({ state: "idle" });
     }
 
     return {

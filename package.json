@@ -1,9 +1,9 @@
 {
     "name": "@nexcodepl/endpoint-client",
-    "version": "1.0.5",
+    "version": "2.0.2",
     "description": "Package for handling endpoint on client side",
-    "main": "lib/index.js",
-    "types": "lib/index.d.ts",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "repository": "https://github.com/NexCodePL/endpoint-client.git",
     "author": "Alexander Stefański <alex@nexcode.pl>",
     "license": "MIT",
@@ -17,26 +17,26 @@
         "build": "yarn tsc",
         "format": "yarn prettier --write \"src/**/*.ts\"",
         "lint": "yarn eslint . --ext .ts",
-        "prepare": "yarn build",
         "prepublishOnly": "yarn lint",
         "preversion": "yarn lint",
         "version": "yarn format && git add -A src",
         "postversion": "git push && git push --tags"
     },
     "dependencies": {
-        "axios": "^0.21.0",
-        "react": "^17.0.1"
+        "@nexcodepl/react-store": "^1.0.2",
+        "axios": "^1.3.4",
+        "react": "^18.2.0"
     },
     "devDependencies": {
         "@nexcodepl/endpoint-types": "^1.0.0",
-        "@types/react": "^16.9.53",
-        "@typescript-eslint/eslint-plugin": "^4.5.0",
-        "@typescript-eslint/parser": "^4.5.0",
-        "eslint": "^7.12.0",
-        "prettier": "^2.1.2",
-        "typescript": "^4.0.3"
+        "@types/react": "^18.0.31",
+        "@typescript-eslint/eslint-plugin": "^5.57.0",
+        "@typescript-eslint/parser": "^5.57.0",
+        "eslint": "^8.37.0",
+        "prettier": "^2.8.7",
+        "typescript": "^5.0.3"
     },
     "files": [
-        "lib/**/*"
+        "dist/**/*"
     ]
 }

@@ -7,7 +7,7 @@ import {
     EndpointDefinitionGetResponse,
 } from "@nexcodepl/endpoint-types";
 
-import { AuthorizationHeadersProvider, EndpointError } from "./client.types";
+import { AuthorizationHeadersProvider, EndpointError } from "./client.types.js";
 
 interface EndpointErrorObject {
     response?: {
@@ -49,22 +49,23 @@ export async function endpoint<TEndpointDefintion extends EndpointDefinition<any
     try {
         const authorizationHeaders = authorizationHeadersProvider ? await authorizationHeadersProvider() : {};
 
+        const headers = { ...authorizationHeaders };
+
+        headers["Content-Type"] = endpointDefinition.method === "GET" ? "text/plain" : "application/json";
+
         const response: AxiosResponse<EndpointDefinitionGetResponse<TEndpointDefintion>> = await axios({
-            url: endpointDefinition.url,
+            url: inlineParamsIntoUrl(endpointDefinition.url, argsObject.params),
             method: endpointDefinition.method,
             data: argsObject.data || {},
             params: argsObject.params || {},
-            headers: {
-                "Content-Type": "application/json",
-                ...authorizationHeaders,
-            },
+            headers: headers,
             cancelToken: new axios.CancelToken(cancelFunction => {
                 if (assignCancel) assignCancel(() => cancelFunction());
             }),
         });
 
         return [undefined, response.data];
-    } catch (e) {
+    } catch (e: unknown) {
         if (axios.isCancel(e)) {
             return [
                 {
@@ -76,13 +77,58 @@ export async function endpoint<TEndpointDefintion extends EndpointDefinition<any
             ];
         }
 
-        const errorObject: EndpointErrorObject | undefined = e;
-        const error: EndpointError = {
-            code: errorObject?.response?.status ?? 500,
-            errorCode: errorObject?.response?.data?.errorCode ?? "UnknownError",
-            errorMessage: errorObject?.response?.data?.errorMessage ?? "Unknown Error",
-            errorData: errorObject?.response?.data?.errorData ?? undefined,
-        };
+        const error = parseEndpointError(e);
+
         return [error, undefined];
     }
+}
+
+function inlineParamsIntoUrl(url: string, params: unknown): string {
+    if (!params) return url;
+    if (typeof params !== "object") return url;
+
+    for (const [key, value] of Object.entries(params)) {
+        const regex = new RegExp(`(:${key})`, "g");
+        url = url.replace(regex, safeToString(value));
+    }
+
+    return url;
+}
+
+function safeToString(value: string | number | boolean): string {
+    if (typeof value === "string") return value;
+    if (typeof value === "number") return value.toString();
+    if (typeof value === "boolean") return value ? "true" : "false";
+    return "";
+}
+
+function isEndpointErrorObject(e: unknown): e is EndpointErrorObject {
+    if (typeof e !== "object") return false;
+
+    if (!(e as EndpointErrorObject)?.response) return false;
+
+    return true;
+}
+
+function parseEndpointError(e: unknown): EndpointError {
+    const error: EndpointError = {
+        code: 500,
+        errorCode: "UnknownError",
+        errorMessage: "Unknown Error",
+        errorData: undefined,
+    };
+
+    if (isEndpointErrorObject(e)) {
+        const code = e?.response?.status;
+        const errorCode = e?.response?.data?.errorCode;
+        const errorMessage = e?.response?.data?.errorMessage;
+        const errorData = e?.response?.data?.errorData;
+
+        if (code) error.code = code;
+        if (errorCode) error.errorCode = errorCode;
+        if (errorMessage) error.errorMessage = errorMessage;
+        if (errorData) error.errorData = errorData;
+    }
+
+    return error;
 }
