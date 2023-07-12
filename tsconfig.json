@@ -16,7 +16,7 @@
         "jsx": "react-jsx",
         "composite": true,
         "baseUrl": "src",
-        "outDir": "./dist",
+        "outDir": "./lib",
         "rootDir": "./src"
     },
     "include": ["src"],

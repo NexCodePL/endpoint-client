@@ -1,114 +1,139 @@
-import { useRef } from "react";
-import { Store, useStore } from "@nexcodepl/react-store";
-import { EndpointArgs, EndpointDefinition, EndpointDefinitionGetResponse } from "@nexcodepl/endpoint-types";
+import { Store, getStoreReadonly } from "@nexcodepl/store";
+import { EndpointDefinition, EndpointDefinitionHeaders, EndpointGetArgs } from "@nexcodepl/endpoint-types";
+import { endpointCall } from "./endpointCall.js";
+import { DatasourceState } from "./types.js";
 
-import { AuthorizationHeadersProvider } from "./client.types.js";
-import { endpoint } from "./endpoint.js";
-
-type DatasourceCancel = () => void;
-
-export interface DatasourceStateIdle {
-    state: "idle";
+export interface DatasourceConfig {
+    headers?: () => EndpointDefinitionHeaders;
 }
 
-export interface DatasourceStatePending {
-    state: "pending";
-}
+export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
+    private _endpoint: TEndpoint;
+    private _config: DatasourceConfig;
+    private _cancelFunction: undefined | (() => void);
+    private _state: Store<DatasourceState<TEndpoint>>;
 
-export interface DatasourceStateRefreshing<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
-    response: EndpointDefinitionGetResponse<TEndpoint>;
-    state: "refreshing";
-}
+    constructor(endpoint: TEndpoint, config: DatasourceConfig) {
+        this._endpoint = endpoint;
+        this._config = config ?? {};
+        this._cancelFunction = undefined;
+        this._state = new Store<DatasourceState<TEndpoint>>({ state: "idle" });
+    }
 
-export interface DatasourceStateCompleted<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
-    response: EndpointDefinitionGetResponse<TEndpoint>;
-    state: "completed";
-}
+    async load(args: EndpointGetArgs<TEndpoint>, keepState?: boolean, overrideUrl?: string) {
+        try {
+            this.cancel();
 
-export interface DatasourceStateError {
-    state: "error";
-    message: string;
-    code: string;
-    data: any;
-}
-export type DatasourceState<TEndpoint extends EndpointDefinition<any, any, any, boolean>> =
-    | DatasourceStateIdle
-    | DatasourceStatePending
-    | DatasourceStateCompleted<TEndpoint>
-    | DatasourceStateRefreshing<TEndpoint>
-    | DatasourceStateError;
+            this._state.set(p => {
+                if (p.state === "completed" && keepState) {
+                    return {
+                        state: "refreshing",
+                        response: p.response,
+                        loadingData: {
+                            isDownload: false,
+                            downloadProgress: undefined,
+                            isUpload: false,
+                            uploadProgress: undefined,
+                        },
+                    };
+                }
 
-export const datasourceStateIdle: DatasourceStateIdle = { state: "idle" };
+                return {
+                    state: "pending",
+                    loadingData: {
+                        isDownload: false,
+                        downloadProgress: undefined,
+                        isUpload: false,
+                        uploadProgress: undefined,
+                    },
+                };
+            });
 
-export function useDatasource<TEndpointDefintion extends EndpointDefinition<any, any, any, boolean>>(
-    endpointDefinition: TEndpointDefintion,
-    authorizationHeadersProvider?: AuthorizationHeadersProvider
-): {
-    state: Store<DatasourceState<TEndpointDefintion>>;
-    load: (args: EndpointArgs<TEndpointDefintion>, keepState?: boolean) => void;
-    cancel: () => void;
-    reset: () => void;
-} {
-    const state = useStore<DatasourceState<TEndpointDefintion>>({
-        ...datasourceStateIdle,
-    });
-    const cancelToken = useRef<DatasourceCancel | undefined>(undefined);
+            const endpointResponse = await endpointCall(
+                { ...this._endpoint, ...(overrideUrl ? { url: overrideUrl } : {}) },
+                args,
+                {
+                    headers: this._config.headers?.() ?? {},
+                    assignCancel: cancelFunction => {
+                        this._cancelFunction = cancelFunction;
+                    },
+                    onUploadProgress: progress => {
+                        this._state.set(p => {
+                            if (p.state !== "pending") return p;
+                            if (p.loadingData.isDownload) return p;
+                            p.loadingData.isUpload = true;
+                            p.loadingData.uploadProgress = progress;
+                            return p;
+                        });
+                    },
+                    onDownloadProgress: progress => {
+                        this._state.set(p => {
+                            if (p.state !== "pending") return p;
+                            p.loadingData.isDownload = true;
+                            p.loadingData.downloadProgress = progress;
+                            return p;
+                        });
+                    },
+                    noFormDataStringify: this._endpoint.noFormDataStringify,
+                }
+            );
 
-    async function load(args: EndpointArgs<TEndpointDefintion>, keepState?: boolean) {
-        cancel();
+            const [error, response] = endpointResponse;
 
-        state.set(p => {
-            if (!!keepState && (p.state === "completed" || p.state === "refreshing")) {
-                return { state: "refreshing", response: p.response };
+            if (error) {
+                if (error.errorCode === "AxiosCancelError") return;
+
+                this._state.set({ state: "error", error });
+            } else {
+                this._state.set({ state: "completed", response: response });
+            }
+
+            return endpointResponse;
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    get state() {
+        return getStoreReadonly(this._state);
+    }
+
+    reset() {
+        this.cancel();
+        this._state.set({ state: "idle" });
+    }
+
+    cancel(config?: { keepResponse?: boolean; updateState?: boolean }) {
+        if (this._cancelFunction) {
+            this._cancelFunction();
+            this._cancelFunction = undefined;
+        }
+
+        if (!config) config = {};
+
+        const { updateState, keepResponse } = config;
+
+        if (!updateState) return;
+
+        const stateCurrent = this._state.current();
+        if (stateCurrent.state !== "pending" && stateCurrent.state !== "refreshing") return;
+
+        this._state.set(p => {
+            if (p.state === "refreshing" && keepResponse) {
+                return {
+                    state: "completed",
+                    response: p.response,
+                };
             }
 
             return {
-                state: "pending",
+                state: "error",
+                error: {
+                    code: 449,
+                    errorCode: "RequestCanceled",
+                    errorMessage: "Request was cancelled",
+                },
             };
         });
-
-        const endpointResponse = await endpoint(
-            endpointDefinition,
-            args,
-            authorizationHeadersProvider,
-            cancelFunction => {
-                cancelToken.current = cancelFunction;
-            }
-        );
-
-        if (endpointResponse[0] !== undefined) {
-            if (endpointResponse[0].errorCode === "AxiosCancelError") return;
-
-            const errorState: DatasourceStateError = {
-                state: "error",
-                code: endpointResponse[0].errorCode,
-                message: endpointResponse[0].errorMessage,
-                data: endpointResponse[0].errorData,
-            };
-            state.set(errorState);
-        } else {
-            state.set({ state: "completed", response: endpointResponse[1] });
-        }
-
-        return endpointResponse;
     }
-
-    function cancel() {
-        if (cancelToken.current) {
-            cancelToken.current();
-            cancelToken.current = undefined;
-        }
-    }
-
-    function reset() {
-        cancel();
-        state.set({ state: "idle" });
-    }
-
-    return {
-        state,
-        load,
-        cancel,
-        reset,
-    };
 }
