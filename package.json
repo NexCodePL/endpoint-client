@@ -1,6 +1,6 @@
 {
     "name": "@nexcodepl/endpoint-client",
-    "version": "3.0.1",
+    "version": "3.0.4",
     "description": "Package for handling endpoint on client side",
     "main": "./lib/index.js",
     "types": "./lib/index.d.ts",

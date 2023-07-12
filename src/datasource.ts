@@ -5,6 +5,7 @@ import { DatasourceState } from "./types.js";
 
 export interface DatasourceConfig {
     headers?: () => EndpointDefinitionHeaders;
+    log?: boolean;
 }
 
 export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
@@ -75,6 +76,7 @@ export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, bool
                         });
                     },
                     noFormDataStringify: this._endpoint.noFormDataStringify,
+                    log: this._config.log,
                 }
             );
 

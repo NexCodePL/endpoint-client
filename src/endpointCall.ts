@@ -17,6 +17,7 @@ export interface EndpointCallConfig {
     onUploadProgress?: (progress: number) => void;
     onDownloadProgress?: (progress: number) => void;
     noFormDataStringify?: boolean | undefined;
+    log?: boolean;
 }
 
 type DataType = "plain" | "json" | "form-data";
@@ -83,6 +84,7 @@ export async function endpointCall<TEndpoint extends EndpointDefinition<any, any
 
         return [undefined, response.data];
     } catch (e: unknown) {
+        if (config.log) console.log(e);
         if (axios.isCancel(e)) {
             return [
                 {
@@ -211,6 +213,8 @@ function inlineParamsIntoUrl<TParams extends EndpointDefinitionParamsAllowed<TPa
         const regex = new RegExp(`(:${key})`, "g");
         url = url.replace(regex, safeToString(value));
     }
+
+    return url;
 }
 
 function safeToString(value: unknown): string {
