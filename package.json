@@ -1,9 +1,9 @@
 {
     "name": "@nexcodepl/endpoint-client",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "description": "Package for handling endpoint on client side",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./lib/index.js",
+    "types": "./lib/index.d.ts",
     "repository": "https://github.com/NexCodePL/endpoint-client.git",
     "author": "Alexander Stefański <alex@nexcode.pl>",
     "license": "MIT",
