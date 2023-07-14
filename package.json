@@ -1,6 +1,6 @@
 {
     "name": "@nexcodepl/endpoint-client",
-    "version": "3.0.4",
+    "version": "3.0.5",
     "description": "Package for handling endpoint on client side",
     "main": "./lib/index.js",
     "types": "./lib/index.d.ts",
@@ -15,7 +15,7 @@
     ],
     "private": false,
     "scripts": {
-        "build": "yarn tsc",
+        "build": "yarn tsc --build --force",
         "format": "yarn prettier --write \"src/**/*.ts\"",
         "lint": "yarn eslint . --ext .ts",
         "prepublishOnly": "yarn lint",
@@ -25,7 +25,7 @@
     },
     "dependencies": {
         "@nexcodepl/endpoint-types": "^2.0.0",
-        "@nexcodepl/store": "^1.0.2",
+        "@nexcodepl/store": "^1.0.7",
         "axios": "^1.3.4"
     },
     "devDependencies": {
