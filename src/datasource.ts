@@ -3,22 +3,28 @@ import { EndpointDefinition, EndpointDefinitionHeaders, EndpointGetArgs } from "
 import { endpointCall } from "./endpointCall.js";
 import { DatasourceState } from "./types.js";
 
-export interface DatasourceConfig {
+export interface DatasourceConfig<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
     headers?: () => EndpointDefinitionHeaders;
     log?: boolean;
+    storeShouldStateUpdate?: (p: DatasourceState<TEndpoint>, n: DatasourceState<TEndpoint>) => boolean;
+    keepCallArgs?: boolean;
 }
 
 export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, boolean>> {
     private _endpoint: TEndpoint;
-    private _config: DatasourceConfig;
+    private _config: DatasourceConfig<TEndpoint>;
     private _cancelFunction: undefined | (() => void);
     private _state: Store<DatasourceState<TEndpoint>>;
+    callArgs: EndpointGetArgs<TEndpoint> | undefined = undefined;
 
-    constructor(endpoint: TEndpoint, config: DatasourceConfig) {
+    constructor(endpoint: TEndpoint, config: DatasourceConfig<TEndpoint>) {
         this._endpoint = endpoint;
         this._config = config ?? {};
         this._cancelFunction = undefined;
-        this._state = new Store<DatasourceState<TEndpoint>>({ state: "idle" });
+        this._state = new Store<DatasourceState<TEndpoint>>(
+            { state: "idle" },
+            { shouldStateUpdate: this._config.storeShouldStateUpdate ?? ((p, n) => p.state !== n.state) }
+        );
     }
 
     async load(args: EndpointGetArgs<TEndpoint>, keepState?: boolean, overrideUrl?: string) {
@@ -49,6 +55,8 @@ export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, bool
                     },
                 };
             });
+
+            if (this._config.keepCallArgs) this.callArgs = args;
 
             const endpointResponse = await endpointCall(
                 { ...this._endpoint, ...(overrideUrl ? { url: overrideUrl } : {}) },
@@ -103,6 +111,7 @@ export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, bool
     reset() {
         this.cancel();
         this._state.set({ state: "idle" });
+        this.callArgs = undefined;
     }
 
     cancel(config?: { keepResponse?: boolean; updateState?: boolean }) {
