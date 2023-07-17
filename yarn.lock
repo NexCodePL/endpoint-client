@@ -68,10 +68,10 @@
   resolved "https://registry.yarnpkg.com/@nexcodepl/endpoint-types/-/endpoint-types-2.0.0.tgz#1061d11ea64de363615a03cf34fddfdc9b10600e"
   integrity sha512-9SSx1aRAMAXnTdn6yRmzHjksxH0XGXmPh8etIz30coihFAgYRzdcIJSGVwRN5ntyQvBL02T1X75cMRbcVwaTnQ==
 
-"@nexcodepl/store@^1.0.8":
-  version "1.0.8"
-  resolved "https://registry.yarnpkg.com/@nexcodepl/store/-/store-1.0.8.tgz#0138c1ddbf3857a520e45b9fe8d0d51b16f1565e"
-  integrity sha512-m8fT25EV8MY8cKQuZlelK3ctwDp3RBR1j7Z8UrfPyiw9DxtSo5LtSpZHDxgz4Xq8iP1Dzzor116vTuf0llfyrA==
+"@nexcodepl/store@^1.0.9":
+  version "1.0.9"
+  resolved "https://registry.yarnpkg.com/@nexcodepl/store/-/store-1.0.9.tgz#880a6bbe4c7556f0a05a0506f9bc1d1740ddd82a"
+  integrity sha512-GVwaqmIC9lZNpXFsEq6Pbujgq88KW10W8bQiT8rMVzcGWMGO7O1bdVFCMrv3MuPakomAjPgxwnH7ET8+5TGs2w==
 
 "@nodelib/fs.scandir@2.1.3":
   version "2.1.3"
