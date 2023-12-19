@@ -7,6 +7,7 @@ export interface DatasourceConfig<TEndpoint extends EndpointDefinition<any, any,
     headers?: () => EndpointDefinitionHeaders;
     log?: boolean;
     storeShouldStateUpdate?: (p: DatasourceState<TEndpoint>, n: DatasourceState<TEndpoint>) => boolean;
+    stateCopyFunction?: (state: DatasourceState<TEndpoint>) => DatasourceState<TEndpoint>;
     keepCallArgs?: boolean;
 }
 
@@ -23,7 +24,10 @@ export class Datasource<TEndpoint extends EndpointDefinition<any, any, any, bool
         this._cancelFunction = undefined;
         this._state = new Store<DatasourceState<TEndpoint>>(
             { state: "idle" },
-            { shouldStateUpdate: this._config.storeShouldStateUpdate ?? ((p, n) => p.state !== n.state) }
+            {
+                shouldStateUpdate: this._config.storeShouldStateUpdate ?? ((p, n) => p.state !== n.state),
+                stateCopyFunction: this._config.stateCopyFunction ?? (p => ({ ...p })),
+            }
         );
     }
 
